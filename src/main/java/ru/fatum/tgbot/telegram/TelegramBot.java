@@ -15,6 +15,7 @@ import ru.fatum.tgbot.config.BotConfig;
 //import ru.fatum.tgbot.model.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import ru.fatum.tgbot.tglogic.KeyboardUtils;
 
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
@@ -30,18 +31,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
     static final String HELP_TEXT = "help text lol";
 
-    public TelegramBot(BotConfig config) {
+    public TelegramBot(BotConfig config) throws TelegramApiException {
         this.config = config;
         List <BotCommand> listofCommands = new ArrayList<>();
         listofCommands.add(new BotCommand("/start", "launch the bot"));
         listofCommands.add(new BotCommand("/savememory", "save your memories"));
         listofCommands.add(new BotCommand("/memories", "get your saved memories"));
-        try{
-            this.execute(new SetMyCommands(listofCommands, new BotCommandScopeDefault(), null));
-        }
-        catch (TelegramApiException e){
-
-        }
+        this.execute(new SetMyCommands(listofCommands, new BotCommandScopeDefault(), null));
     }
 
     @Override
@@ -53,7 +49,6 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             if (messageText.startsWith("/start")) {
                 isBotEnabled = true;
-
                 currentState = BotState.REGULAR;
             }
 
@@ -62,12 +57,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
 
             if (messageText.startsWith("/help")) {
-                sendMessage(chatId, HELP_TEXT);
+                KeyboardUtils.sendMessage(this,chatId, HELP_TEXT);
             }
-
-
-
-
 
             switch (currentState) {
                 /*case MEMORGET:
@@ -88,19 +79,19 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 case ASKTOTAKETEST:
                     if(messageText.startsWith("Yes | Take Test")){
-                        sendResponseWithKeyboard(chatId, "To Be or Not To Be?", getKeyboardFor1q());
+                        KeyboardUtils.sendResponseWithKeyboard(this,chatId, "To Be or Not To Be?", KeyboardUtils.getKeyboardFor1q());
                         currentState = BotState.qFIRST;
                         break;
                     }
                     //ЕЩЁ ОДИН ИФ
                     else {
-                        sendResponseWithKeyboard(chatId, "Would you like to take a test to determine your current mood?", getKeyboardForAskTest());
+                        KeyboardUtils.sendResponseWithKeyboard(this,chatId, "Would you like to take a test to determine your current mood?", KeyboardUtils.getKeyboardForAskTest());
                         return;
                     }
 
                 case REGULAR:
                     if (messageText.startsWith("/savememory")){
-                        sendResponseWithKeyboard(chatId, "Would you like to take a test to determine your current mood?", getKeyboardForAskTest());
+                        KeyboardUtils.sendResponseWithKeyboard(this,chatId, "Would you like to take a test to determine your current mood?", KeyboardUtils.getKeyboardForAskTest());
                         currentState = BotState.ASKTOTAKETEST;
                         break;
                     }
@@ -110,7 +101,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         break;
                     }
                     else{
-                        sendMessage(chatId,"This bot can help you to save your beautiful memories \n" +
+                        KeyboardUtils.sendMessage(this,chatId,"This bot can help you to save your beautiful memories \n" +
                                 "To control this bot you can use these commands:\n" +
                                 "/savememory - to remember something important for you\n" +
                                 "/memories - get your saved memories" );
@@ -118,99 +109,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                     }
 
                 default:
-                    sendMessage(chatId, "Please choose one of the options");
+                    KeyboardUtils.sendMessage(this,chatId, "Please choose one of the options");
                     break;
             }
         }
     }
-
-
-    private ReplyKeyboardMarkup getKeyboardFor1q() {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-        row.add("to be");
-        row.add("not to be");
-        keyboard.add(row);
-        keyboardMarkup.setKeyboard(keyboard);
-        return keyboardMarkup;
-    }
-
-    private ReplyKeyboardMarkup getKeyboardForAskTest() {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-        row.add("Yes | Take Test");
-        row.add("No | Write Memory");
-        keyboard.add(row);
-        keyboardMarkup.setKeyboard(keyboard);
-        return keyboardMarkup;
-    }
-
-    private ReplyKeyboardMarkup getKeyboardForDef() {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-        row.add("Retain Memory");
-        row.add("Recall Memories");
-        keyboard.add(row);
-        keyboardMarkup.setKeyboard(keyboard);
-        return keyboardMarkup;
-    }
-
-    private void sendResponseWithKeyboard(long chatId, String responseText, ReplyKeyboardMarkup keyboard) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(chatId));
-        sendMessage.setText(responseText);
-        sendMessage.setReplyMarkup(keyboard);
-
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
-    /*private void registerUser(Message message) {
-        if(userRepository.findById(message.getChatId()).isEmpty()){
-            var chatId = message.getChatId();
-            var chat = message.getChat();
-            User user = new User();
-            user.setChatId(chatId);
-            user.setFirstName(chat.getFirstName());
-            user.setLastName(chat.getLastName());
-            user.setUserName(chat.getUserName());
-            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
-
-            userRepository.save(user);
-            //log.info("user.saved: " + user);
-
-        }
-    }
-*/
-
-    private void sendMessage(long chatId, String textToSend)  {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(textToSend);
-
-        try{
-            execute(message);
-        }
-        catch (TelegramApiException e) {
-
-        }
-    }
-
     @Override
     public String getBotUsername() {
         return BotConfig.botName;
