@@ -11,6 +11,6 @@ import org.springframework.context.annotation.PropertySource;
 @Getter
 @PropertySource("application.properties")
 public class BotConfig {
-    public static final String botName = "";
-    public static final String token = "";
+    public static final String botName = "meremain_bot";
+    public static final String token = "6452054634:AAGmJo0h6IR8zhRWBanDw2PkyUjjvFgGCJE";
 }

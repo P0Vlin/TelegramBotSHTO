@@ -1,24 +1,18 @@
 package ru.fatum.tgbot.telegram;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ru.fatum.tgbot._interface.MessageHandler;
 import ru.fatum.tgbot.config.BotConfig;
-import ru.fatum.tgbot.logic.BotRequest;
 //import ru.fatum.tgbot.model.User;
 //import ru.fatum.tgbot.model.UserRepository;
-import ru.fatum.tgbot.telegram.BotConverter;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,25 +23,19 @@ public class TelegramBot extends TelegramLongPollingBot {
     //private UserRepository userRepository;
 
     private enum BotState {
-        W8START,
-        MEMORGET,
-        ASKTOTAKETEST,
-        GIVEMEMSTORAGE,
-        FINISH
+        REGULAR, W8START, MEMORGET, ASKTOTAKETEST, GIVEMEMSTORAGE, qFIRST;
     }
-
     private BotState currentState = BotState.W8START;
     private boolean isBotEnabled = false;
-
     final BotConfig config;
-
     static final String HELP_TEXT = "help text lol";
 
     public TelegramBot(BotConfig config) {
         this.config = config;
         List <BotCommand> listofCommands = new ArrayList<>();
-        listofCommands.add(new BotCommand("/start", "get a welcome message"));
-        listofCommands.add(new BotCommand("/mydata", "check my your data"));
+        listofCommands.add(new BotCommand("/start", "launch the bot"));
+        listofCommands.add(new BotCommand("/savememory", "save your memories"));
+        listofCommands.add(new BotCommand("/memories", "get your saved memories"));
         try{
             this.execute(new SetMyCommands(listofCommands, new BotCommandScopeDefault(), null));
         }
@@ -66,23 +54,23 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (messageText.startsWith("/start")) {
                 isBotEnabled = true;
 
-                currentState = BotState.MEMORGET;
-                sendResponseWithKeyboard(chatId, "Выберите что вы хотите сделать" , getKeyboardForDef());
+                currentState = BotState.REGULAR;
             }
-
 
             if (!isBotEnabled){
                 return;
             }
 
-
-            if (messageText.startsWith("/help")){
+            if (messageText.startsWith("/help")) {
                 sendMessage(chatId, HELP_TEXT);
             }
 
 
+
+
+
             switch (currentState) {
-                case MEMORGET:
+                /*case MEMORGET:
                     if (messageText.startsWith("Retain Memory")) {
                         sendResponseWithKeyboard(chatId, "Would you like to take a test to determine your current mood?", getKeyboardForAskTest());
                         currentState = BotState.ASKTOTAKETEST;
@@ -92,23 +80,62 @@ public class TelegramBot extends TelegramLongPollingBot {
                         currentState = BotState.GIVEMEMSTORAGE;
                         break;
                     }
-                    break;
+                    else{
+                        sendResponseWithKeyboard(chatId, "What do you want to do?" , getKeyboardForDef());
+                        currentState = BotState.MEMORGET;
+                        break;
+                    }*/
 
                 case ASKTOTAKETEST:
+                    if(messageText.startsWith("Yes | Take Test")){
+                        sendResponseWithKeyboard(chatId, "To Be or Not To Be?", getKeyboardFor1q());
+                        currentState = BotState.qFIRST;
+                        break;
+                    }
+                    //ЕЩЁ ОДИН ИФ
+                    else {
+                        sendResponseWithKeyboard(chatId, "Would you like to take a test to determine your current mood?", getKeyboardForAskTest());
+                        return;
+                    }
 
-                    break;
+                case REGULAR:
+                    if (messageText.startsWith("/savememory")){
+                        sendResponseWithKeyboard(chatId, "Would you like to take a test to determine your current mood?", getKeyboardForAskTest());
+                        currentState = BotState.ASKTOTAKETEST;
+                        break;
+                    }
+                    if (messageText.startsWith("/memories")){
+                        //Возможно в будующем можно будет сделать чтобы бот предлагал воспоминания по годам, когда их станет очень много, только как это сделать динамически я пока что не знаю
+                        currentState = BotState.GIVEMEMSTORAGE;
+                        break;
+                    }
+                    else{
+                        sendMessage(chatId,"This bot can help you to save your beautiful memories \n" +
+                                "To control this bot you can use these commands:\n" +
+                                "/savememory - to remember something important for you\n" +
+                                "/memories - get your saved memories" );
+                        return;
+                    }
 
                 default:
-                    sendMessage(chatId, "Sorry, command was not recognized");
+                    sendMessage(chatId, "Please choose one of the options");
                     break;
             }
-
-
-
         }
+    }
 
 
+    private ReplyKeyboardMarkup getKeyboardFor1q() {
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true);
+        List<KeyboardRow> keyboard = new ArrayList<>();
 
+        KeyboardRow row = new KeyboardRow();
+        row.add("to be");
+        row.add("not to be");
+        keyboard.add(row);
+        keyboardMarkup.setKeyboard(keyboard);
+        return keyboardMarkup;
     }
 
     private ReplyKeyboardMarkup getKeyboardForAskTest() {
@@ -117,8 +144,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row = new KeyboardRow();
-        row.add("Take Test");
-        row.add("Write Memory");
+        row.add("Yes | Take Test");
+        row.add("No | Write Memory");
         keyboard.add(row);
         keyboardMarkup.setKeyboard(keyboard);
         return keyboardMarkup;
@@ -149,6 +176,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
+
 
 
     /*private void registerUser(Message message) {
